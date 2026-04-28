@@ -43,7 +43,29 @@
         <div class="form-cols">
           <section class="form-col">
             <h2 class="form-heading">1 · Video</h2>
-            <p class="form-hint">Paste a watch URL or the 11-character video ID.</p>
+            <p class="form-hint">Search by keyword or paste a URL/ID.</p>
+
+            <div class="search-box">
+              <label class="visually-hidden" for="q">Keyword</label>
+              <input id="q" type="text" class="input" placeholder="Keyword (e.g. activecampaign automations)" />
+              <div class="search-row">
+                <div class="mini">
+                  <label class="mini-label" for="region">Region</label>
+                  <input id="region" type="text" class="input mini-input" placeholder="PK / US" maxlength="2" />
+                </div>
+                <div class="mini">
+                  <label class="mini-label" for="maxResults">Max</label>
+                  <input id="maxResults" type="number" class="input mini-input" min="1" max="50" value="10" />
+                </div>
+                <button id="search" type="button" class="btn btn-outline btn-sm">Search</button>
+              </div>
+            </div>
+
+            <div class="results" aria-label="Search results">
+              <div id="results-empty" class="results-empty">No results yet. Search to list videos.</div>
+              <div id="results" class="results-list" role="list"></div>
+            </div>
+
             <label class="visually-hidden" for="videoId">Video URL or ID</label>
             <input id="videoId" type="text" class="input-lg" spellcheck="false" autocomplete="off"
               placeholder="https://www.youtube.com/watch?v=…" />

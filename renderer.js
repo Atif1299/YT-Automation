@@ -6,11 +6,19 @@ const viewForm = document.getElementById("view-form");
 const viewEmpty = document.getElementById("view-empty");
 const signinBtn = document.getElementById("signin");
 const signoutBtn = document.getElementById("signout");
+const qInput = document.getElementById("q");
+const regionInput = document.getElementById("region");
+const maxResultsInput = document.getElementById("maxResults");
+const searchBtn = document.getElementById("search");
+const resultsEmpty = document.getElementById("results-empty");
+const resultsList = document.getElementById("results");
 const videoIdInput = document.getElementById("videoId");
 const text = document.getElementById("text");
 const generateBtn = document.getElementById("generate");
 const postBtn = document.getElementById("post");
 const result = document.getElementById("result");
+
+let selectedVideoId = null;
 
 function setResult(msg, kind) {
   result.textContent = msg;
@@ -19,6 +27,17 @@ function setResult(msg, kind) {
   if (kind === "err") result.classList.add("result--err");
   if (kind === "work") result.classList.add("result--work");
   if (!msg) result.classList.remove("result--ok", "result--err", "result--work");
+}
+
+function setSelected(videoId) {
+  selectedVideoId = videoId || null;
+  if (selectedVideoId) {
+    videoIdInput.value = selectedVideoId;
+  }
+  const items = resultsList.querySelectorAll(".result-item");
+  for (const el of items) {
+    el.classList.toggle("is-selected", el.dataset.videoId === selectedVideoId);
+  }
 }
 
 function extractVideoId(raw) {
@@ -37,6 +56,43 @@ function extractVideoId(raw) {
     if (m) return m[1];
   }
   return null;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderResults(videos) {
+  resultsList.innerHTML = "";
+  if (!videos.length) {
+    resultsEmpty.hidden = false;
+    return;
+  }
+  resultsEmpty.hidden = true;
+  for (const v of videos) {
+    const title = escapeHtml(v.title || "");
+    const meta = escapeHtml(
+      [v.channelTitle, v.publishedAt ? new Date(v.publishedAt).toLocaleDateString() : ""]
+        .filter(Boolean)
+        .join(" · "),
+    );
+    const item = document.createElement("div");
+    item.className = "result-item";
+    item.dataset.videoId = v.videoId;
+    item.setAttribute("role", "listitem");
+    item.innerHTML = `<div class="result-title">${title}</div><div class="result-meta">${meta}</div>`;
+    item.addEventListener("click", () => {
+      setSelected(v.videoId);
+      setResult("Selected video: " + v.videoId, "ok");
+    });
+    resultsList.appendChild(item);
+  }
+  if (selectedVideoId) setSelected(selectedVideoId);
 }
 
 async function refresh() {
@@ -63,6 +119,27 @@ async function refresh() {
     channelEl.textContent = "";
   }
 }
+
+searchBtn.addEventListener("click", async () => {
+  const query = (qInput.value || "").trim();
+  if (!query) {
+    setResult("Enter a keyword to search.", "err");
+    return;
+  }
+  searchBtn.disabled = true;
+  setResult("Searching…", "work");
+  const r = await window.api.searchVideos(query, {
+    regionCode: (regionInput.value || "").trim(),
+    maxResults: Number(maxResultsInput.value || 10),
+  });
+  searchBtn.disabled = false;
+  if (r.ok) {
+    renderResults(r.videos || []);
+    setResult("Search complete. Pick a video from the list.", "ok");
+  } else {
+    setResult("Search failed: " + (r.error || "unknown"), "err");
+  }
+});
 
 signinBtn.addEventListener("click", async () => {
   lineStatus.hidden = false;
@@ -92,6 +169,7 @@ generateBtn.addEventListener("click", async () => {
     setResult("Set the video (URL or ID) first, then generate.", "err");
     return;
   }
+  setSelected(id);
   generateBtn.disabled = true;
   setResult("Loading video + calling OpenAI…", "work");
   const r = await window.api.generateComment(id);
@@ -110,6 +188,7 @@ postBtn.addEventListener("click", async () => {
     setResult("Add a full YouTube link or an 11-character video ID.", "err");
     return;
   }
+  setSelected(id);
   if (!String(text.value || "").trim()) {
     setResult("Enter your comment text.", "err");
     return;

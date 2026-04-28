@@ -397,3 +397,57 @@ ipcMain.handle("comment:generate", async (_e, payload) => {
     return { ok: false, error: e?.message || String(e) };
   }
 });
+
+ipcMain.handle("videos:search", async (_e, payload) => {
+  const query = payload?.query ? String(payload.query).trim() : "";
+  const maxResultsRaw = payload?.maxResults;
+  const regionCodeRaw = payload?.regionCode;
+
+  if (!query) return { ok: false, error: "Query is required" };
+
+  const maxResults = Math.max(
+    1,
+    Math.min(50, Number.isFinite(Number(maxResultsRaw)) ? Number(maxResultsRaw) : 10),
+  );
+  const regionCode = regionCodeRaw ? String(regionCodeRaw).trim().toUpperCase() : "";
+
+  const t = readTokens();
+  if (!t?.access_token) return { ok: false, error: "Not signed in" };
+
+  const oauth2 = getOAuth2Client();
+  oauth2.setCredentials(t);
+  if (needsRefresh(oauth2) && t.refresh_token) {
+    const { credentials } = await oauth2.refreshAccessToken();
+    const merged = mergeRefreshed(t, credentials);
+    oauth2.setCredentials(merged);
+    writeTokens(merged);
+  }
+
+  try {
+    const youtube = google.youtube({ version: "v3", auth: oauth2 });
+    const res = await youtube.search.list({
+      part: ["snippet"],
+      type: ["video"],
+      q: query,
+      maxResults,
+      ...(regionCode ? { regionCode } : {}),
+    });
+    const items = Array.isArray(res.data?.items) ? res.data.items : [];
+    const videos = items
+      .map((it) => ({
+        videoId: it?.id?.videoId || "",
+        title: it?.snippet?.title || "",
+        channelTitle: it?.snippet?.channelTitle || "",
+        publishedAt: it?.snippet?.publishedAt || "",
+      }))
+      .filter((v) => v.videoId);
+
+    return { ok: true, videos };
+  } catch (e) {
+    const err = e?.response?.data || e;
+    return {
+      ok: false,
+      error: e?.message || (typeof err === "object" ? JSON.stringify(err) : String(e)),
+    };
+  }
+});

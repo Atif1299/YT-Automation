@@ -8,4 +8,10 @@ contextBridge.exposeInMainWorld("api", {
   postComment: (payload) => ipcRenderer.invoke("comment:post", payload),
   generateComment: (videoId) =>
     ipcRenderer.invoke("comment:generate", { videoId }),
+  searchVideos: (query, options) =>
+    ipcRenderer.invoke("videos:search", {
+      query,
+      maxResults: options?.maxResults,
+      regionCode: options?.regionCode,
+    }),
 });

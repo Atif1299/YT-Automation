@@ -228,6 +228,140 @@ body
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
 }
 
+.search-box
+{
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.search-row
+{
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.mini
+{
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mini-label
+{
+  font-size: 0.65rem;
+  color: #707088;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.mini-input
+{
+  width: 6rem;
+}
+
+.input
+{
+  width: 100%;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: #101014;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--r);
+  padding: 0.45rem 0.6rem;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.input:focus
+{
+  border-color: rgba(230, 33, 23, 0.5);
+  box-shadow: 0 0 0 1px rgba(230, 33, 23, 0.2);
+}
+
+.input::placeholder
+{
+  color: #5c5c6a;
+}
+
+.results
+{
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--r);
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.results-empty
+{
+  padding: 0.65rem 0.7rem;
+  font-size: 0.8rem;
+  color: #6d6d7e;
+}
+
+.results-list
+{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.result-item
+{
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.result-item:first-child
+{
+  border-top: none;
+}
+
+.result-item:hover
+{
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.result-item.is-selected
+{
+  background: rgba(230, 33, 23, 0.12);
+  outline: 1px solid rgba(230, 33, 23, 0.28);
+}
+
+.result-title
+{
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.result-meta
+{
+  font-size: 0.72rem;
+  color: #7a7a8a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .form-col--main
 {
   min-height: 0;
