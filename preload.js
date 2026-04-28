@@ -13,5 +13,19 @@ contextBridge.exposeInMainWorld("api", {
       query,
       maxResults: options?.maxResults,
       regionCode: options?.regionCode,
+      year: options?.year,
+      month: options?.month,
     }),
+  trendingVideos: (options) =>
+    ipcRenderer.invoke("videos:trending", {
+      maxResults: options?.maxResults,
+      regionCode: options?.regionCode,
+      videoCategoryId: options?.videoCategoryId,
+    }),
+  listCategories: (options) =>
+    ipcRenderer.invoke("categories:list", {
+      regionCode: options?.regionCode,
+    }),
+  getPrompt: () => ipcRenderer.invoke("prompt:get"),
+  setPrompt: (systemPrompt) => ipcRenderer.invoke("prompt:set", { systemPrompt }),
 });

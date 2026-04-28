@@ -20,6 +20,9 @@
         </div>
       </div>
       <div class="titlebar-right" id="titlebar-auth" aria-live="polite">
+        <div class="auth-cluster">
+          <button id="openSettings" type="button" class="btn btn-outline btn-sm">Settings</button>
+        </div>
         <div id="tb-out" class="auth-cluster">
           <span class="status-pill">Not connected</span>
           <button id="signin" type="button" class="btn primary btn-sm">
@@ -39,53 +42,182 @@
     <main class="workarea" role="main">
       <p id="line-status" class="line-status" hidden></p>
 
-      <div id="view-form" class="form-layout" hidden>
-        <div class="form-cols">
-          <section class="form-col">
-            <h2 class="form-heading">1 · Video</h2>
-            <p class="form-hint">Search by keyword or paste a URL/ID.</p>
+      <div id="view-form" class="stepper" hidden>
+        <nav class="steps" aria-label="Steps">
+          <button id="stepBtn1" type="button" class="step is-active" data-step="1">
+            <span class="step-num">1</span>
+            <span class="step-text">Search</span>
+          </button>
+          <button id="stepBtn2" type="button" class="step" data-step="2" disabled>
+            <span class="step-num">2</span>
+            <span class="step-text">Drafts</span>
+          </button>
+          <button id="stepBtn3" type="button" class="step" data-step="3" disabled>
+            <span class="step-num">3</span>
+            <span class="step-text">Posting</span>
+          </button>
+        </nav>
 
-            <div class="search-box">
-              <label class="visually-hidden" for="q">Keyword</label>
-              <input id="q" type="text" class="input" placeholder="Keyword (e.g. activecampaign automations)" />
-              <div class="search-row">
-                <div class="mini">
-                  <label class="mini-label" for="region">Region</label>
-                  <input id="region" type="text" class="input mini-input" placeholder="PK / US" maxlength="2" />
-                </div>
-                <div class="mini">
-                  <label class="mini-label" for="maxResults">Max</label>
-                  <input id="maxResults" type="number" class="input mini-input" min="1" max="50" value="10" />
-                </div>
-                <button id="search" type="button" class="btn btn-outline btn-sm">Search</button>
-              </div>
+        <!-- STEP 1: SEARCH -->
+        <section id="step1" class="step-view">
+          <div class="search-top">
+            <div class="field field-mini">
+              <label class="mini-label" for="discoveryMode">Mode</label>
+              <select id="discoveryMode" class="input mini-input">
+                <option value="search" selected>Keyword</option>
+                <option value="trending">Trending</option>
+              </select>
             </div>
+            <div class="field">
+              <label class="mini-label" for="q">Keyword</label>
+              <input id="q" type="text" class="input" placeholder="Keyword (e.g. activecampaign automations)" />
+            </div>
+            <div class="field field-mini">
+              <label class="mini-label" for="region">Region</label>
+              <input id="region" type="text" class="input mini-input" placeholder="PK / US" maxlength="2" />
+            </div>
+            <div class="field field-mini">
+              <label class="mini-label" for="maxResults">Max</label>
+              <input id="maxResults" type="number" class="input mini-input" min="1" max="50" value="10" />
+            </div>
+            <div class="field field-mini">
+              <label class="mini-label" for="year">Year</label>
+              <select id="year" class="input mini-input">
+                <option value="">Any</option>
+              </select>
+            </div>
+            <div class="field field-mini">
+              <label class="mini-label" for="month">Month</label>
+              <select id="month" class="input mini-input" disabled>
+                <option value="">Any</option>
+                <option value="1">Jan</option>
+                <option value="2">Feb</option>
+                <option value="3">Mar</option>
+                <option value="4">Apr</option>
+                <option value="5">May</option>
+                <option value="6">Jun</option>
+                <option value="7">Jul</option>
+                <option value="8">Aug</option>
+                <option value="9">Sep</option>
+                <option value="10">Oct</option>
+                <option value="11">Nov</option>
+                <option value="12">Dec</option>
+              </select>
+            </div>
+            <div class="field field-actions">
+              <button id="search" type="button" class="btn btn-outline">Search</button>
+            </div>
+          </div>
 
-            <div class="results" aria-label="Search results">
+          <div class="step-body">
+            <div class="results wide" aria-label="Search results">
               <div id="results-empty" class="results-empty">No results yet. Search to list videos.</div>
               <div id="results" class="results-list" role="list"></div>
             </div>
-
-            <label class="visually-hidden" for="videoId">Video URL or ID</label>
-            <input id="videoId" type="text" class="input-lg" spellcheck="false" autocomplete="off"
-              placeholder="https://www.youtube.com/watch?v=…" />
-          </section>
-          <section class="form-col form-col--main">
-            <h2 class="form-heading">2 · Comment</h2>
-            <p class="form-hint">This posts as a top-level comment (not a reply).</p>
-            <label class="visually-hidden" for="text">Comment text</label>
-            <textarea id="text" class="input-textarea" rows="6" placeholder="Your comment text…"></textarea>
-          </section>
-        </div>
-        <footer class="form-footer">
-          <div class="form-footer-actions">
-            <button id="generate" type="button" class="btn btn-outline">
-              Generate from description
-            </button>
-            <button id="post" type="button" class="btn primary">Post comment</button>
           </div>
-          <p id="result" class="result" aria-live="polite"></p>
-        </footer>
+
+          <footer class="step-footer">
+            <div class="footer-left">
+              <button id="selectAll" type="button" class="btn btn-outline btn-sm">Select all</button>
+              <button id="clearSelection" type="button" class="btn btn-outline btn-sm">Clear</button>
+            </div>
+            <div class="footer-right">
+              <button id="toDrafts" type="button" class="btn primary">Next → Drafts</button>
+            </div>
+          </footer>
+        </section>
+
+        <!-- STEP 2: DRAFTS -->
+        <section id="step2" class="step-view" hidden>
+          <div class="step-body split">
+            <div class="queue">
+              <div class="queue-head">
+                <div class="queue-title">Draft queue</div>
+                <div class="queue-sub" id="queueCount">0 selected</div>
+              </div>
+              <div id="queue" class="queue-list"></div>
+            </div>
+            <div class="editor">
+              <div class="editor-head">
+                <div class="editor-head-row">
+                  <div class="editor-title" id="editorTitle">Select a video</div>
+                  <div class="editor-nav" aria-label="Draft navigation">
+                    <button id="prevDraft" type="button" class="icon-btn" aria-label="Previous draft">&lt;</button>
+                    <button id="nextDraft" type="button" class="icon-btn" aria-label="Next draft">&gt;</button>
+                  </div>
+                </div>
+                <div class="editor-sub" id="editorMeta"></div>
+              </div>
+              <textarea id="text" class="input-textarea" rows="10" placeholder="Your comment text…"></textarea>
+              <div class="editor-actions">
+                <button id="generate" type="button" class="btn btn-outline">Generate selected</button>
+                <button id="generateAll" type="button" class="btn btn-outline">Generate all (5x)</button>
+                <button id="clearDraftsAll" type="button" class="btn btn-outline">Clear all</button>
+              </div>
+              <div id="progress" class="progress" hidden>
+                <div class="progress-head">
+                  <span id="progressLabel" class="progress-label">Progress</span>
+                  <span id="progressCount" class="progress-count">0/0</span>
+                </div>
+                <div class="progress-bar">
+                  <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <footer class="step-footer">
+            <div class="footer-left">
+              <button id="backToSearch" type="button" class="btn btn-outline btn-sm">← Back</button>
+            </div>
+            <div class="footer-right">
+              <button id="toPosting" type="button" class="btn primary">Next → Posting</button>
+            </div>
+          </footer>
+        </section>
+
+        <!-- STEP 3: POSTING -->
+        <section id="step3" class="step-view" hidden>
+          <div class="post-top">
+            <div class="field field-mini">
+              <label class="mini-label" for="delaySeconds">Delay (s)</label>
+              <input id="delaySeconds" type="number" class="input mini-input" min="0" max="300" value="5" />
+            </div>
+          </div>
+
+          <div class="step-body split">
+            <div class="queue">
+              <div class="queue-head">
+                <div class="queue-title">Posting list</div>
+                <div class="queue-sub" id="postCount">0 items</div>
+              </div>
+              <div id="postList" class="queue-list"></div>
+            </div>
+            <div class="log">
+              <div class="editor-head">
+                <div class="editor-title">Status</div>
+                <div class="editor-sub">Progress and latest result</div>
+              </div>
+              <div id="progressPosting" class="progress">
+                <div class="progress-head">
+                  <span id="progressPostingLabel" class="progress-label">Posting comments</span>
+                  <span id="progressPostingCount" class="progress-count">0/0</span>
+                </div>
+                <div class="progress-bar">
+                  <div id="progressPostingFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+              </div>
+              <p id="result" class="result" aria-live="polite"></p>
+            </div>
+          </div>
+          <footer class="step-footer">
+            <div class="footer-left">
+              <button id="backToDrafts" type="button" class="btn btn-outline btn-sm">← Back</button>
+            </div>
+            <div class="footer-right">
+              <button id="postAll" type="button" class="btn primary">Start Comment all</button>
+            </div>
+          </footer>
+        </section>
       </div>
 
       <div id="view-empty" class="empty">
@@ -94,6 +226,24 @@
           Sign in with the button in the top-right. Your channel ID appears there when
           you are connected, then you can set the video and comment here.
         </p>
+      </div>
+
+      <div id="settingsModal" class="modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="Settings">
+          <div class="modal-head">
+            <div>
+              <div class="modal-title">Settings</div>
+              <div class="modal-sub">System prompt used for comment generation.</div>
+            </div>
+            <button id="closeSettings" class="btn btn-outline btn-sm" type="button">Close</button>
+          </div>
+          <textarea id="systemPrompt" class="input-textarea" rows="10" placeholder="System prompt…"></textarea>
+          <div class="modal-actions">
+            <button id="resetPrompt" type="button" class="btn btn-outline">Use default</button>
+            <button id="savePrompt" type="button" class="btn primary">Save</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
