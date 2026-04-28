@@ -1,0 +1,19 @@
+{
+  "name": "yt-commenting",
+  "version": "1.0.0",
+  "description": "Electron app to post YouTube comments via Data API v3",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

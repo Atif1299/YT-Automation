@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>YT Commenting</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="shell">
+    <header class="titlebar" role="banner">
+      <div class="titlebar-left">
+        <div class="app-mark" aria-hidden="true">▶</div>
+        <div>
+          <h1 class="app-title">YT Commenting</h1>
+          <p class="app-tagline">Post comments with your YouTube channel</p>
+        </div>
+      </div>
+      <div class="titlebar-right" id="titlebar-auth" aria-live="polite">
+        <div id="tb-out" class="auth-cluster">
+          <span class="status-pill">Not connected</span>
+          <button id="signin" type="button" class="btn primary btn-sm">
+            Sign in with Google
+          </button>
+        </div>
+        <div id="tb-in" class="auth-cluster" hidden>
+          <span class="status-pill status-pill--on">Active</span>
+          <code id="channel" class="channel-id"></code>
+          <button id="signout" type="button" class="btn btn-outline btn-sm">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workarea" role="main">
+      <p id="line-status" class="line-status" hidden></p>
+
+      <div id="view-form" class="form-layout" hidden>
+        <div class="form-cols">
+          <section class="form-col">
+            <h2 class="form-heading">1 · Video</h2>
+            <p class="form-hint">Paste a watch URL or the 11-character video ID.</p>
+            <label class="visually-hidden" for="videoId">Video URL or ID</label>
+            <input id="videoId" type="text" class="input-lg" spellcheck="false" autocomplete="off"
+              placeholder="https://www.youtube.com/watch?v=…" />
+          </section>
+          <section class="form-col form-col--main">
+            <h2 class="form-heading">2 · Comment</h2>
+            <p class="form-hint">This posts as a top-level comment (not a reply).</p>
+            <label class="visually-hidden" for="text">Comment text</label>
+            <textarea id="text" class="input-textarea" rows="6" placeholder="Your comment text…"></textarea>
+          </section>
+        </div>
+        <footer class="form-footer">
+          <div class="form-footer-actions">
+            <button id="generate" type="button" class="btn btn-outline">
+              Generate from description
+            </button>
+            <button id="post" type="button" class="btn primary">Post comment</button>
+          </div>
+          <p id="result" class="result" aria-live="polite"></p>
+        </footer>
+      </div>
+
+      <div id="view-empty" class="empty">
+        <p class="empty-title">Connect Google</p>
+        <p class="empty-text">
+          Sign in with the button in the top-right. Your channel ID appears there when
+          you are connected, then you can set the video and comment here.
+        </p>
+      </div>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+
+</html>
