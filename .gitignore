@@ -1,8 +1,7 @@
-node_modules/
-.env
-.env.example
-*.log
-out/
-dist/
-
-google-client-id.example.json
+node_modules/
+.env
+*.log
+out/
+dist/
+google-client-id.json
+google-client-secret.json

@@ -1,0 +1,91 @@
+# Release tagged builds (v*): set repository secrets as needed.
+# GOOGLE_CLIENT_ID — OAuth Desktop client ID injected into google-client-id.json (required for working sign-in in shipped builds).
+# GITHUB_TOKEN is available as secrets.GITHUB_TOKEN for publish.
+#
+# Signing (optional but recommended for production):
+# - Windows: secrets WINDOWS_CERTIFICATE_FILE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD
+#            or use CSC_LINK / CSC_KEY_PASSWORD env (electron-builder standard).
+# - macOS: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID, plus certificates in keychain
+#          on the runner, or ASC provider API key files — see https://www.electron.build/code-signing
+#
+# For unsigned CI artifacts, omit secrets; Smart Screen / Gatekeeper may warn users.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Inject Google OAuth client ID
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: node scripts/write-google-client-id.js
+
+      - name: Verify OAuth client ID for release build
+        run: node scripts/check-google-client-id.js --strict
+
+      - name: Build Windows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: npm run dist:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-dist
+          path: dist/
+
+  release-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Inject Google OAuth client ID
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: node scripts/write-google-client-id.js
+
+      - name: Verify OAuth client ID for release build
+        run: node scripts/check-google-client-id.js --strict
+
+      - name: Build macOS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          # Signing / notarization when you add secrets and certs:
+          # CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run dist:mac
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-dist
+          path: dist/

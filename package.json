@@ -2,18 +2,97 @@
   "name": "yt-commenting",
   "version": "1.0.0",
   "description": "Electron app to post YouTube comments via Data API v3",
+  "author": "YT Commenting",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "predist": "node scripts/write-google-client-id.js",
+    "verify:client-id": "node scripts/check-google-client-id.js",
+    "verify:packaged": "node scripts/verify-packaged-win.js",
+    "dist": "electron-builder",
+    "dist:win": "npm run predist && electron-builder --win",
+    "dist:mac": "npm run predist && electron-builder --mac",
+    "publish": "npm run predist && electron-builder --publish always"
   },
   "engines": {
     "node": ">=18"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Atif1299/YT-Automation.git"
+  },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "electron-updater": "^6.6.2",
+    "google-auth-library": "^9.15.1",
     "googleapis": "^144.0.0"
   },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.ytcommenting.app",
+    "productName": "YT Commenting",
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "icon": "build/icon.png",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "styles.css",
+      "package.json"
+    ],
+    "extraResources": [
+      "google-client-id.json",
+      "google-client-secret.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signtoolOptions": {
+        "publisherName": "YT Commenting"
+      },
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Atif1299",
+        "repo": "YT-Automation",
+        "releaseType": "release"
+      }
+    ]
   }
 }

@@ -234,14 +234,25 @@
           <div class="modal-head">
             <div>
               <div class="modal-title">Settings</div>
-              <div class="modal-sub">System prompt used for comment generation.</div>
+              <div class="modal-sub">OpenAI API key and system prompt for comment generation.</div>
             </div>
             <button id="closeSettings" class="btn btn-outline btn-sm" type="button">Close</button>
           </div>
+          <div class="settings-block">
+            <label class="mini-label" for="openaiKey">OpenAI API key</label>
+            <p id="openaiKeyHint" class="modal-hint" aria-live="polite"></p>
+            <input id="openaiKey" type="password" class="input" autocomplete="off"
+              placeholder="sk-… (stored encrypted on this device)" />
+            <div class="modal-actions modal-actions--inline">
+              <button id="saveOpenaiKey" type="button" class="btn btn-outline">Save API key</button>
+              <button id="clearOpenaiKey" type="button" class="btn btn-outline">Clear stored key</button>
+            </div>
+          </div>
+          <label class="mini-label" for="systemPrompt">System prompt</label>
           <textarea id="systemPrompt" class="input-textarea" rows="10" placeholder="System prompt…"></textarea>
           <div class="modal-actions">
             <button id="resetPrompt" type="button" class="btn btn-outline">Use default</button>
-            <button id="savePrompt" type="button" class="btn primary">Save</button>
+            <button id="savePrompt" type="button" class="btn primary">Save prompt</button>
           </div>
         </div>
       </div>
