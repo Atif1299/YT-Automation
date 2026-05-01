@@ -12,6 +12,10 @@ const closeSettingsBtn = document.getElementById("closeSettings");
 const systemPromptEl = document.getElementById("systemPrompt");
 const savePromptBtn = document.getElementById("savePrompt");
 const resetPromptBtn = document.getElementById("resetPrompt");
+const openaiKeyInput = document.getElementById("openaiKey");
+const openaiKeyHint = document.getElementById("openaiKeyHint");
+const saveOpenaiKeyBtn = document.getElementById("saveOpenaiKey");
+const clearOpenaiKeyBtn = document.getElementById("clearOpenaiKey");
 
 // Stepper
 const stepBtn1 = document.getElementById("stepBtn1");
@@ -106,6 +110,13 @@ async function openSettings() {
     defaultPromptCache = r.defaultPrompt || "";
     systemPromptEl.value = r.systemPrompt || "";
   }
+  const k = await window.api.getOpenAIKeyStatus();
+  if (k?.ok && openaiKeyHint) {
+    openaiKeyHint.textContent = k.hasKey
+      ? "An API key is stored on this device (enter a new key to replace it)."
+      : "No API key stored. Add one to use Generate, or set OPENAI_API_KEY in .env when developing.";
+  }
+  if (openaiKeyInput) openaiKeyInput.value = "";
   settingsModal.hidden = false;
 }
 
@@ -140,6 +151,39 @@ savePromptBtn.addEventListener("click", async () => {
     setResult("Could not save prompt: " + (r?.error || "unknown"), "err");
   }
 });
+
+if (saveOpenaiKeyBtn && openaiKeyInput) {
+  saveOpenaiKeyBtn.addEventListener("click", async () => {
+    const key = String(openaiKeyInput.value || "").trim();
+    const r = await window.api.setOpenAIKey(key);
+    if (r?.ok) {
+      setResult(key ? "OpenAI API key saved on this device." : "OpenAI API key cleared.", "ok");
+      const st = await window.api.getOpenAIKeyStatus();
+      if (st?.ok && openaiKeyHint) {
+        openaiKeyHint.textContent = st.hasKey
+          ? "An API key is stored on this device (enter a new key to replace it)."
+          : "No API key stored.";
+      }
+      openaiKeyInput.value = "";
+    } else {
+      setResult("Could not save API key.", "err");
+    }
+  });
+}
+
+if (clearOpenaiKeyBtn) {
+  clearOpenaiKeyBtn.addEventListener("click", async () => {
+    await window.api.clearOpenAIKey();
+    if (openaiKeyInput) openaiKeyInput.value = "";
+    const st = await window.api.getOpenAIKeyStatus();
+    if (st?.ok && openaiKeyHint) {
+      openaiKeyHint.textContent = st.hasKey
+        ? "An API key is stored on this device (enter a new key to replace it)."
+        : "No API key stored.";
+    }
+    setResult("Stored OpenAI API key removed.", "ok");
+  });
+}
 function getYearMonth() {
   const year = Number.parseInt(String(yearSelect.value || ""), 10);
   const month = Number.parseInt(String(monthSelect.value || ""), 10);

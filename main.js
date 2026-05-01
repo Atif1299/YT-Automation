@@ -2,9 +2,74 @@ const { app, BrowserWindow, shell, safeStorage, ipcMain, Menu } = require("elect
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
+const crypto = require("crypto");
 const { parse: parseUrl } = require("url");
+
 require("dotenv").config();
 
+function loadEnvFromUserData() {
+  try {
+    const envPath = path.join(app.getPath("userData"), ".env");
+    if (fs.existsSync(envPath)) {
+      require("dotenv").config({ path: envPath });
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function getGoogleClientSecret() {
+  return String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
+}
+
+/**
+ * Token exchange for Desktop OAuth + PKCE.
+ * IMPORTANT: Only include client_secret if non-empty. Sending client_secret= (empty)
+ * causes Google to reject with "client_secret is missing". Omitting it entirely
+ * is correct for public Desktop clients using PKCE.
+ */
+async function exchangeAuthorizationCodeForTokens(code, codeVerifier) {
+  const clientId = getGoogleClientId();
+  const clientSecret = getGoogleClientSecret();
+  const { redirectUri } = getConfig();
+  const body = new URLSearchParams();
+  body.append("client_id", clientId);
+  if (clientSecret) {
+    body.append("client_secret", clientSecret);
+  }
+  body.append("code", code);
+  body.append("code_verifier", codeVerifier);
+  body.append("grant_type", "authorization_code");
+  body.append("redirect_uri", redirectUri);
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Token exchange failed (non-JSON): ${text.slice(0, 400)}`);
+  }
+  if (!res.ok) {
+    const err = new Error(data.error_description || data.error || text.slice(0, 300));
+    err.response = { data };
+    throw err;
+  }
+  const tokens = { ...data };
+  if (typeof data.expires_in === "number") {
+    tokens.expiry_date = Date.now() + data.expires_in * 1000;
+    delete tokens.expires_in;
+  }
+  return tokens;
+}
+
+loadEnvFromUserData();
+
+const { autoUpdater } = require("electron-updater");
+const { OAuth2Client, ClientAuthentication } = require("google-auth-library");
 const { google } = require("googleapis");
 function needsRefresh(c) {
   if (!c.credentials?.refresh_token) return false;
@@ -21,6 +86,7 @@ const USER_DATA = () => app.getPath("userData");
 const TOKEN_FILE = () => path.join(USER_DATA(), "yt-tokens.enc");
 const COMMENTED_FILE = () => path.join(USER_DATA(), "commented-videos.json");
 const PROMPT_FILE = () => path.join(USER_DATA(), "prompt-settings.json");
+const OPENAI_KEY_FILE = () => path.join(USER_DATA(), "openai-key.enc");
 const channelCache = { id: null };
 let commentedVideoIds = null;
 let promptSettings = null;
@@ -38,23 +104,77 @@ function ensureUserDataDir() {
   }
 }
 
-function getConfig() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const port = Number.parseInt(String(process.env.OAUTH_REDIRECT_PORT || "53134"), 10);
-  const pathSuffix = (process.env.OAUTH_CALLBACK_PATH || "/oauth2callback").startsWith("/")
-    ? process.env.OAUTH_CALLBACK_PATH
-    : `/${process.env.OAUTH_CALLBACK_PATH || "oauth2callback"}`;
-  const redirectUri = `http://127.0.0.1:${port}${pathSuffix}`;
-  return { clientId, clientSecret, port, pathSuffix, redirectUri };
+function getGoogleClientId() {
+  const env = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+  if (env) return env;
+  const candidates = [];
+  if (app.isPackaged && process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, "google-client-id.json"));
+  }
+  candidates.push(path.join(__dirname, "google-client-id.json"));
+  for (const p of candidates) {
+    if (!fs.existsSync(p)) continue;
+    try {
+      const j = JSON.parse(fs.readFileSync(p, "utf8"));
+      const id = String(j.clientId || "").trim();
+      if (id) return id;
+    } catch {
+      // ignore
+    }
+  }
+  return "";
 }
 
+function getConfig() {
+  const port = Number.parseInt(String(process.env.OAUTH_REDIRECT_PORT || "53134"), 10);
+  const raw = String(process.env.OAUTH_CALLBACK_PATH || "/oauth2callback").trim() || "/oauth2callback";
+  const pathSuffix = raw.startsWith("/") ? raw : `/${raw}`;
+  const redirectUri = `http://127.0.0.1:${port}${pathSuffix}`;
+  return { port, pathSuffix, redirectUri };
+}
+
+/**
+ * OAuth2 + PKCE. Uses ClientSecretPost so client_secret appears in the token POST body.
+ * Desktop clients: empty secret is OK. Web clients: Google requires the real secret — set
+ * GOOGLE_CLIENT_SECRET (dev .env or packaged: %APPDATA%\\yt-commenting\\.env).
+ */
 function getOAuth2Client() {
-  const { clientId, clientSecret, redirectUri } = getConfig();
-  if (!clientId || !clientSecret) {
-    throw new Error("Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env");
+  const clientId = getGoogleClientId();
+  const { redirectUri } = getConfig();
+  if (!clientId) {
+    throw new Error(
+      "Missing Google OAuth client ID. For development set GOOGLE_CLIENT_ID in .env; for builds set GOOGLE_CLIENT_ID when running the predist script.",
+    );
   }
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  return new OAuth2Client({
+    clientId,
+    clientSecret: getGoogleClientSecret(),
+    redirectUri,
+    clientAuthentication: ClientAuthentication.ClientSecretPost,
+  });
+}
+
+function generatePkcePair() {
+  const verifier = crypto.randomBytes(32).toString("base64url");
+  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+  return { verifier, challenge };
+}
+
+/** Prefer Google's error_description from token/API failures (renderer only showed generic invalid_request before). */
+function formatOAuthError(e) {
+  const d = e?.response?.data;
+  if (d && typeof d === "object") {
+    const err = d.error != null ? String(d.error) : "";
+    const desc = d.error_description != null ? String(d.error_description) : "";
+    if (desc) return err ? `${err}: ${desc}` : desc;
+    if (err) return err;
+    try {
+      return JSON.stringify(d);
+    } catch {
+      // ignore
+    }
+  }
+  return e?.message || String(e);
 }
 
 function readTokens() {
@@ -80,6 +200,42 @@ function writeTokens(t) {
   } else {
     fs.writeFileSync(f, s, "utf8");
   }
+}
+
+function readStoredOpenAIKey() {
+  const f = OPENAI_KEY_FILE();
+  if (!fs.existsSync(f)) return "";
+  const buf = fs.readFileSync(f);
+  if (safeStorage.isEncryptionAvailable()) {
+    try {
+      return safeStorage.decryptString(buf);
+    } catch {
+      return "";
+    }
+  }
+  return buf.toString("utf8");
+}
+
+function getOpenAIApiKey() {
+  const stored = readStoredOpenAIKey().trim();
+  if (stored) return stored;
+  return String(process.env.OPENAI_API_KEY || "").trim();
+}
+
+function writeStoredOpenAIKey(key) {
+  ensureUserDataDir();
+  const f = OPENAI_KEY_FILE();
+  const s = String(key || "");
+  if (safeStorage.isEncryptionAvailable()) {
+    fs.writeFileSync(f, safeStorage.encryptString(s));
+  } else {
+    fs.writeFileSync(f, s, "utf8");
+  }
+}
+
+function clearStoredOpenAIKey() {
+  const f = OPENAI_KEY_FILE();
+  if (fs.existsSync(f)) fs.unlinkSync(f);
 }
 
 /** Merged credentials from refresh; keep prior refresh_token when the response omits it. */
@@ -204,11 +360,12 @@ function stopLocalServer() {
 }
 
 /**
- * @returns {Promise<string>}
+ * @returns {Promise<{ code: string, codeVerifier: string }>}
  */
 function startOAuthCodeFlow() {
   const { port, pathSuffix } = getConfig();
   const oauth2 = getOAuth2Client();
+  const { verifier: codeVerifier, challenge: codeChallenge } = generatePkcePair();
   if (httpServer) stopLocalServer();
 
   return new Promise((resolve, reject) => {
@@ -216,6 +373,8 @@ function startOAuthCodeFlow() {
       access_type: "offline",
       scope: SCOPES,
       prompt: "consent",
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
     });
 
     httpServer = http
@@ -255,14 +414,15 @@ function startOAuthCodeFlow() {
 
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         res.end(
-          "<p>Signed in. You can close this window and return to the app.</p>"
+          "<p>Google returned an authorization code. Close this tab — sign-in completes in the desktop app.</p>" +
+            "<p>If the app shows an error, the browser step still succeeded; try again or check the message in the app.</p>"
         );
         stopLocalServer();
 
         if (pendingOAuth) {
           const r = pendingOAuth;
           pendingOAuth = null;
-          r.resolve(code);
+          r.resolve({ code, codeVerifier });
         }
       })
       .listen(port, "127.0.0.1", () => {
@@ -314,11 +474,20 @@ function createWindow() {
   mainWindow.loadFile("index.html");
 }
 
+function setupAutoUpdater() {
+  if (!app.isPackaged) return;
+  autoUpdater.checkForUpdatesAndNotify().catch(() => {
+    // offline or unpublished feed
+  });
+}
+
 app.whenReady().then(() => {
+  loadEnvFromUserData();
   if (process.platform !== "darwin") {
     Menu.setApplicationMenu(null);
   }
   createWindow();
+  setupAutoUpdater();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -352,27 +521,47 @@ ipcMain.handle("channel:get", async () => {
     const channelId = await fetchChannelIdForUser(oauth2);
     return { ok: true, channelId };
   } catch (e) {
-    return { ok: false, error: e?.message || String(e) };
+    return { ok: false, error: formatOAuthError(e) };
   }
 });
 
 ipcMain.handle("oauth:start", async () => {
   try {
-    const code = await startOAuthCodeFlow();
+    const { code, codeVerifier } = await startOAuthCodeFlow();
     const oauth2 = getOAuth2Client();
-    const { tokens } = await oauth2.getToken(code);
+    const tokens = await exchangeAuthorizationCodeForTokens(code, codeVerifier);
     oauth2.setCredentials(tokens);
     writeTokens(tokens);
     channelCache.id = null;
     const channelId = await fetchChannelIdForUser(oauth2);
     return { ok: true, channelId };
   } catch (e) {
-    return { ok: false, error: e?.message || String(e) };
+    return { ok: false, error: formatOAuthError(e) };
   }
 });
 
 ipcMain.handle("auth:logout", () => {
   clearTokens();
+  return { ok: true };
+});
+
+ipcMain.handle("openai:keyStatus", async () => {
+  const hasKey = !!getOpenAIApiKey();
+  return { ok: true, hasKey };
+});
+
+ipcMain.handle("openai:setKey", async (_e, rawKey) => {
+  const key = typeof rawKey === "string" ? rawKey.trim() : "";
+  if (!key) {
+    clearStoredOpenAIKey();
+    return { ok: true };
+  }
+  writeStoredOpenAIKey(key);
+  return { ok: true };
+});
+
+ipcMain.handle("openai:clearKey", async () => {
+  clearStoredOpenAIKey();
   return { ok: true };
 });
 
@@ -424,9 +613,9 @@ ipcMain.handle("comment:post", async (_e, payload) => {
 });
 
 async function callOpenAIChat(system, user) {
-  const key = (process.env.OPENAI_API_KEY || "").trim();
+  const key = getOpenAIApiKey();
   if (!key) {
-    throw new Error("Set OPENAI_API_KEY in .env");
+    throw new Error('Add your OpenAI API key in Settings (or set OPENAI_API_KEY in .env for development).');
   }
   const model = (process.env.OPENAI_MODEL || "gpt-4o-mini").trim();
   const res = await fetch("https://api.openai.com/v1/chat/completions", {

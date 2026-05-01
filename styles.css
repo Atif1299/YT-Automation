@@ -157,6 +157,29 @@ body
   justify-content: flex-end;
 }
 
+.modal-actions--inline
+{
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.settings-block
+{
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-hint
+{
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+
 .titlebar-left
 {
   display: flex;

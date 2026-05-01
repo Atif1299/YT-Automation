@@ -28,4 +28,7 @@ contextBridge.exposeInMainWorld("api", {
     }),
   getPrompt: () => ipcRenderer.invoke("prompt:get"),
   setPrompt: (systemPrompt) => ipcRenderer.invoke("prompt:set", { systemPrompt }),
+  getOpenAIKeyStatus: () => ipcRenderer.invoke("openai:keyStatus"),
+  setOpenAIKey: (key) => ipcRenderer.invoke("openai:setKey", key),
+  clearOpenAIKey: () => ipcRenderer.invoke("openai:clearKey"),
 });
