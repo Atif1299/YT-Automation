@@ -12,6 +12,10 @@
 
 name: Release
 
+# Allow electron-builder to upload release assets (GH_TOKEN); default token scope was too narrow → 403.
+permissions:
+  contents: write
+
 on:
   push:
     tags:
@@ -30,6 +34,16 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Require repository secret GOOGLE_CLIENT_ID
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ]; then
+            echo "::error::Add secret GOOGLE_CLIENT_ID: Repository → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+        shell: bash
 
       - name: Inject Google OAuth client ID
         env:
@@ -64,6 +78,16 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Require repository secret GOOGLE_CLIENT_ID
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ]; then
+            echo "::error::Add secret GOOGLE_CLIENT_ID: Repository → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+        shell: bash
+
       - name: Inject Google OAuth client ID
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -76,7 +100,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          # Signing / notarization when you add secrets and certs:
+          # Unsigned CI builds: skip signing auto-discovery (no Apple cert on runner).
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          # When you add signing secrets, remove CSC_IDENTITY_AUTO_DISCOVERY or set signing vars below:
           # CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
           # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           # APPLE_ID: ${{ secrets.APPLE_ID }}
