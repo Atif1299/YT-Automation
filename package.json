@@ -48,7 +48,8 @@
       "package.json"
     ],
     "extraResources": [
-      "google-client-id.json"
+      "google-client-id.json",
+      "google-client-secret.json"
     ],
     "win": {
       "target": [
