@@ -19,7 +19,24 @@ function loadEnvFromUserData() {
 }
 
 function getGoogleClientSecret() {
-  return String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
+  const env = String(process.env.GOOGLE_CLIENT_SECRET || "").trim();
+  if (env) return env;
+  const candidates = [];
+  if (app.isPackaged && process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, "google-client-secret.json"));
+  }
+  candidates.push(path.join(__dirname, "google-client-secret.json"));
+  for (const p of candidates) {
+    if (!fs.existsSync(p)) continue;
+    try {
+      const j = JSON.parse(fs.readFileSync(p, "utf8"));
+      const s = String(j.clientSecret || "").trim();
+      if (s) return s;
+    } catch {
+      // ignore
+    }
+  }
+  return "";
 }
 
 /**

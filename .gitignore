@@ -4,3 +4,4 @@ node_modules/
 out/
 dist/
 google-client-id.json
+google-client-secret.json
