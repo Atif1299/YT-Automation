@@ -94,16 +94,13 @@ jobs:
       - name: Verify OAuth client ID for release build
         run: node scripts/check-google-client-id.js --strict
 
-      - name: Ensure app icon ≥512px (Darwin / electron-builder)
+      # electron-builder Darwin requires ≥512×512; always normalize so CI never depends on repo icon size.
+      - name: Normalize app icon to 512×512
         run: |
           set -e
           test -f build/icon.png
-          w=$(sips -g pixelWidth build/icon.png | awk '/pixelWidth/ {print $2}')
-          h=$(sips -g pixelHeight build/icon.png | awk '/pixelHeight/ {print $2}')
-          if [ "$w" -lt 512 ] || [ "$h" -lt 512 ]; then
-            echo "Scaling build/icon.png from ${w}x${h} to 512x512"
-            sips -z 512 512 build/icon.png --out build/icon.png
-          fi
+          sips -z 512 512 build/icon.png --out build/icon.png
+          sips -g pixelWidth -g pixelHeight build/icon.png
 
       - name: Build macOS (no GitHub publish — use Artifacts below)
         env:
