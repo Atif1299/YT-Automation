@@ -1,6 +1,6 @@
 # Release tagged builds (v*): set repository secrets as needed.
 # GOOGLE_CLIENT_ID — OAuth Desktop client ID injected into google-client-id.json (required for working sign-in in shipped builds).
-# GITHUB_TOKEN is available as secrets.GITHUB_TOKEN for publish.
+# CI builds use --publish never (avoid 403 uploading to Releases). Download installers from the workflow run Artifacts.
 #
 # Signing (optional but recommended for production):
 # - Windows: secrets WINDOWS_CERTIFICATE_FILE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD
@@ -12,9 +12,8 @@
 
 name: Release
 
-# Allow electron-builder to upload release assets (GH_TOKEN); default token scope was too narrow → 403.
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
@@ -53,11 +52,10 @@ jobs:
       - name: Verify OAuth client ID for release build
         run: node scripts/check-google-client-id.js --strict
 
-      - name: Build Windows
+      - name: Build Windows (no GitHub publish — use Artifacts below)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-        run: npm run dist:win
+        run: npm run predist && npx electron-builder --win --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -96,9 +94,19 @@ jobs:
       - name: Verify OAuth client ID for release build
         run: node scripts/check-google-client-id.js --strict
 
-      - name: Build macOS
+      - name: Ensure app icon ≥512px (Darwin / electron-builder)
+        run: |
+          set -e
+          test -f build/icon.png
+          w=$(sips -g pixelWidth build/icon.png | awk '/pixelWidth/ {print $2}')
+          h=$(sips -g pixelHeight build/icon.png | awk '/pixelHeight/ {print $2}')
+          if [ "$w" -lt 512 ] || [ "$h" -lt 512 ]; then
+            echo "Scaling build/icon.png from ${w}x${h} to 512x512"
+            sips -z 512 512 build/icon.png --out build/icon.png
+          fi
+
+      - name: Build macOS (no GitHub publish — use Artifacts below)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           # Unsigned CI builds: skip signing auto-discovery (no Apple cert on runner).
           CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -108,7 +116,7 @@ jobs:
           # APPLE_ID: ${{ secrets.APPLE_ID }}
           # APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npm run dist:mac
+        run: npm run predist && npx electron-builder --mac --publish never
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
