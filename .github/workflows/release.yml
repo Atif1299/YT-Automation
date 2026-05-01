@@ -94,6 +94,7 @@ jobs:
       - name: Verify OAuth client ID for release build
         run: node scripts/check-google-client-id.js --strict
 
+        
       # electron-builder Darwin requires ≥512×512; always normalize so CI never depends on repo icon size.
       - name: Normalize app icon to 512×512
         run: |
